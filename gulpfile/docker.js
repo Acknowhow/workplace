@@ -1,6 +1,7 @@
 const spawn = require('child_process').spawn;
 const path = require('path');
 const fs = require('fs');
+const YAML = require('yaml');
 
 const { PROJECT_FILE, updateGitignore } = require('./gitignore');
 
@@ -119,6 +120,10 @@ const fileTemplate = (
 }, null, 2);
 
 const runCommand = (command, config, cb) => {
+  console.log('command is', command);
+  console.log('config is', config);
+  console.log('cb is', cb);
+
   fs.writeFileSync(
     path.join(config.appDirectory, PROJECT_FILE, 'docker-compose.json'),
     fileTemplate(
@@ -136,6 +141,16 @@ const runCommand = (command, config, cb) => {
       getServiceConfig(config, 'rabbitmq')
     )
   );
+
+  try {
+      const jsonStr = fs.readFileSync(
+          path.join(config.appDirectory, PROJECT_FILE, 'docker-compose.json'), 'utf8');
+      const jsonData = JSON.parse(jsonStr);
+
+      fs.writeFileSync(path.join(config.appDirectory, PROJECT_FILE, 'docker-compose.yml'), YAML.stringify(jsonData));
+  } catch (err) {
+      console.error(err);
+  }
 
   const cmd = spawn(
     'docker-compose',
@@ -159,6 +174,8 @@ exports.composeCommand = (cb, command, config) => {
     return cb();
   }
   updateGitignore(config.appDirectory);
+
+  // Checks directory and creates workplace dir if needed
   if (!fs.existsSync(path.join(config.appDirectory, PROJECT_FILE))) {
     fs.mkdirSync(path.join(config.appDirectory, PROJECT_FILE));
   }
@@ -166,23 +183,23 @@ exports.composeCommand = (cb, command, config) => {
   process.env.COMPOSE_PROJECT_NAME = config.projectName;
   process.env.USERID = require('os').userInfo().uid;
 
-  fs.writeFileSync(
-    path.join(config.appDirectory, PROJECT_FILE, 'docker-compose.json'),
-    fileTemplate(
-      config.type,
-      config.appDirectory,
-      path.resolve(`../nginx/${config.type}`),
-      config.projectName,
-      [config.php.image, config.php.port, config.php.env],
-      [config.nginx.image,  config.nginx.port, config.nginx.env],
-      [config.mysql.image,  config.mysql.port, config.mysql.env],
-      getServiceConfig(config, 'redis'),
-      getServiceConfig(config, 'elasticsearch'),
-      getServiceConfig(config, 'varnish'),
-      getServiceConfig(config, 'clickhouse'),
-      getServiceConfig(config, 'rabbitmq')
-    )
-  );
+  // fs.writeFileSync(
+  //   path.join(config.appDirectory, PROJECT_FILE, 'docker-compose.json'),
+  //   fileTemplate(
+  //     config.type,
+  //     config.appDirectory,
+  //     path.resolve(`../nginx/${config.type}`),
+  //     config.projectName,
+  //     [config.php.image, config.php.port, config.php.env],
+  //     [config.nginx.image,  config.nginx.port, config.nginx.env],
+  //     [config.mysql.image,  config.mysql.port, config.mysql.env],
+  //     getServiceConfig(config, 'redis'),
+  //     getServiceConfig(config, 'elasticsearch'),
+  //     getServiceConfig(config, 'varnish'),
+  //     getServiceConfig(config, 'clickhouse'),
+  //     getServiceConfig(config, 'rabbitmq')
+  //   )
+  // );
 
   runCommand(command, config, cb);
 };

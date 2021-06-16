@@ -22,6 +22,12 @@ const verifyFileExists = (folder) => {
   }
 };
 
+const verifyYamlFileExists = (folder) => {
+    if (!fileExists(path.join(folder, GITIGNORE_FILE))) {
+        throw `No ${GITIGNORE_FILE} to append to`;
+    }
+}
+
 const verifyStringDoesNotExistInFile = (folder) => {
   const current_content = fs.readFileSync(path.join(folder, GITIGNORE_FILE));
   if (current_content.includes(PROJECT_FILE)) {
@@ -44,6 +50,8 @@ const printSuccessMessage = () => {
 exports.fileExists = fileExists;
 exports.PROJECT_FILE = PROJECT_FILE;
 exports.updateGitignore = (folder) => {
+  console.log('updateGitignore folder is', folder);
+
   try {
     verifyFileExists(folder);
     verifyStringDoesNotExistInFile(folder);

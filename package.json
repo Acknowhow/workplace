@@ -33,12 +33,14 @@
     "gulp-sourcemaps": "^2.6.5",
     "gulp-stylelint": "^13.0.0",
     "gulp-watch": "^5.0.1",
+    "json-to-pretty-yaml": "^1.2.2",
     "node-normalize-scss": "^8.1.2",
     "postcss": "^8.2.4",
     "require-dir": "^1.2.0",
     "sassime": "^1.1.6",
     "stylelint": "^13.8.0",
-    "stylelint-config-mygento": "1.0.0-beta2"
+    "stylelint-config-mygento": "1.0.0-beta2",
+    "yaml": "2.0.0-6"
   },
   "devDependencies": {
     "chai": "^4.2.0",

@@ -189,9 +189,13 @@ const fixJsTask = (cb) => {
 fixJsTask.displayName = 'js lint autofix';
 
 // Docker
-const startDockerTask = (cb) => composeCommand(
-  cb, ['up', '-d'], workplaceConfig
-);
+const startDockerTask = (cb) => {
+
+    console.log('startDockerTask cb is', cb);
+    composeCommand(
+        cb, ['up', '-d'], workplaceConfig
+    );
+};
 startDockerTask.displayName = 'docker';
 const stopDockerTask  = (cb) => composeCommand(cb, ['stop'], workplaceConfig);
 stopDockerTask.displayName = 'docker';
