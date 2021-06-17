@@ -25,7 +25,7 @@ const optionalService = (
     {},
     {
       container_name: `${projectName}-${name}`,
-      networks: [networkName],
+      // networks: [networkName],
       image: image,
     },
     port ? {
@@ -63,7 +63,7 @@ const fileTemplate = (
       php: {
         container_name: `${projectName}-php`,
         image: phpImage,
-        networks: [networkName],
+        // networks: [networkName],
         volumes: [`${projectRoot}:/var/www/${projectType}`],
         environment: ['PHPFPM_USER=$USERID', ...phpEnv],
         depends_on: ['db'],
@@ -71,7 +71,7 @@ const fileTemplate = (
       nginx: {
         container_name: `${projectName}-nginx`,
         image: nginxImage,
-        networks: [networkName],
+        // networks: [networkName],
         environment: ['NGINX_USER=$USERID', ...nginxEnv],
         volumes: [
           `${workplaceRoot}:/etc/nginx/sites-enabled/`,
@@ -83,7 +83,7 @@ const fileTemplate = (
       db: {
         container_name: `${projectName}-db`,
         image: dbImage,
-        networks: [networkName],
+        // networks: [networkName],
         ports: [`${dbPort}:3306`],
         environment: [
           'MYSQL_ROOT_PASSWORD=mygento',
@@ -108,15 +108,15 @@ const fileTemplate = (
     optionalVolume(clickhouseImage, 'clickhouse'),
     optionalVolume(rabbitmqImage, 'rabbitmq')
   ),
-  networks: {
-    [networkName]: {
-      driver: 'bridge',
-      driver_opts: {
-        'com.docker.network.enable_ipv6': 'false',
-        'com.docker.network.bridge.name': projectName
-      }
-    }
-  }
+  // networks: {
+  //   [networkName]: {
+  //     driver: 'bridge',
+  //     driver_opts: {
+  //       'com.docker.network.enable_ipv6': 'false',
+  //       'com.docker.network.bridge.name': projectName
+  //     }
+  //   }
+  // }
 }, null, 2);
 
 const runCommand = (command, config, cb) => {
