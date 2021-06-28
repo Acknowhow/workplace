@@ -19,7 +19,7 @@ const getServiceConfig = (config, service) => {
 };
 
 const optionalService = (
-  projectName, name, image, port = false, portDefault, env = [], volume = []
+  projectName, name, image, port = false, portDefault, env = [], volume = [], dependsOn = [], network = []
 ) => image ? {
   [name]: Object.assign(
     {},
@@ -28,12 +28,23 @@ const optionalService = (
       // networks: [networkName],
       image: image,
     },
+
     port ? {
       ports: [`${port}:${portDefault}`],
     } : {},
+
+    network.length > 0 ? {
+        networks: network
+    } : {},
+
     volume.length > 0 ? {
       volumes: volume,
     } : {},
+
+    dependsOn.length > 0 ? {
+        depends_on: dependsOn,
+    } : {},
+
     env.length > 0 ? {
       environment: env
     } : {}
@@ -44,17 +55,21 @@ const optionalVolume = (image, name) => image ? { [name]: {} } : {};
 
 const fileTemplate = (
   projectType,
+
   projectRoot,
   workplaceRoot,
   projectName,
   [phpImage, _phpPort, phpEnv = []],
   [nginxImage,  nginxPort, nginxEnv = []],
   [dbImage, dbPort, dbEnv = []],
+  [seleniumImage, seleniumPort, seleniumEnv = []],
   [redisImage = null, redisPort = null, redisEnv = []],
   [elasticImage = null, elasticPort = null, elasticEnv = []],
   [varnishImage = null, varnishPort = null, varnishEnv = []],
   [clickhouseImage = null, clickhousePort = null, clickhouseEnv = []],
-  [rabbitmqImage = null, rabbitmqPort = null, rabbitmqEnv = []]
+  [rabbitmqImage = null, rabbitmqPort = null, rabbitmqEnv = []],
+  [firefoxImage = null, firefoxPort = null, firefoxEnv = []],
+  [chromeImage = null, chromePort = null, chromeEnv = []]
 ) => JSON.stringify({
   version: '3.7',
   services: Object.assign(
@@ -94,12 +109,28 @@ const fileTemplate = (
         ],
         volumes: [`${getVolumeName(projectType, 'db')}:/var/lib/mysql`],
       },
+      selenium: {
+          container_name: `${projectName}-selenium`,
+          image: seleniumImage,
+          // networks: ['grid'],
+          ports: [
+              '4442:4442',
+              '4443:4443',
+              `${seleniumPort}:4444`
+          ]
+      }
     },
     optionalService(projectName, 'redis', redisImage, redisPort, 6379, redisEnv, []),
     optionalService(projectName, 'elastic', elasticImage, elasticPort, 9200, ['discovery.type=single-node', ...elasticEnv], ['elastic:/usr/share/elasticsearch/data']),
     optionalService(projectName, 'varnish', varnishImage, varnishPort, 8081, varnishEnv, []),
     optionalService(projectName, 'clickhouse', clickhouseImage, clickhousePort, 8123, clickhouseEnv, ['clickhouse:/var/lib/clickhouse']),
-    optionalService(projectName, 'rabbitmq', rabbitmqImage, rabbitmqPort, 5672, rabbitmqEnv, ['rabbitmq:/var/lib/rabbitmq'])
+    optionalService(projectName, 'rabbitmq', rabbitmqImage, rabbitmqPort, 5672, rabbitmqEnv, ['rabbitmq:/var/lib/rabbitmq']),
+    optionalService(projectName, 'firefox', firefoxImage, firefoxPort, 5900, [
+        'SE_EVENT_BUS_HOST=selenium', 'SE_EVENT_BUS_PUBLISH_PORT=4442', 'SE_EVENT_BUS_SUBSCRIBE_PORT=4443', ...firefoxEnv],
+        ['/dev/shm:/dev/shm'], ['selenium']),
+    optionalService(projectName, 'chrome', chromeImage, chromePort, 5900, [
+        'SE_EVENT_BUS_HOST=selenium', 'SE_EVENT_BUS_PUBLISH_PORT=4442', 'SE_EVENT_BUS_SUBSCRIBE_PORT=4443', ...chromeEnv],
+        ['/dev/shm:/dev/shm'], ['selenium']),
   ),
   volumes: Object.assign(
     {},
@@ -109,11 +140,11 @@ const fileTemplate = (
     optionalVolume(rabbitmqImage, 'rabbitmq')
   ),
   // networks: {
-  //   [networkName]: {
+  //   ['grid']: {
   //     driver: 'bridge',
   //     driver_opts: {
   //       'com.docker.network.enable_ipv6': 'false',
-  //       'com.docker.network.bridge.name': projectName
+  //       'com.docker.network.bridge.name': 'dolce-myfit'
   //     }
   //   }
   // }
@@ -121,6 +152,7 @@ const fileTemplate = (
 
 const runCommand = (command, config, cb) => {
   console.log('command is', command);
+  // Local package.json config
   console.log('config is', config);
   console.log('cb is', cb);
 
@@ -134,11 +166,14 @@ const runCommand = (command, config, cb) => {
       [config.php.image, config.php.port, config.php.env],
       [config.nginx.image,  config.nginx.port, config.nginx.env],
       [config.mysql.image,  config.mysql.port, config.mysql.env],
+      [config.selenium.image, config.selenium.port, config.selenium.env],
       getServiceConfig(config, 'redis'),
       getServiceConfig(config, 'elasticsearch'),
       getServiceConfig(config, 'varnish'),
       getServiceConfig(config, 'clickhouse'),
-      getServiceConfig(config, 'rabbitmq')
+      getServiceConfig(config, 'rabbitmq'),
+      getServiceConfig(config, 'firefox'),
+      getServiceConfig(config, 'chrome')
     )
   );
 
@@ -152,11 +187,11 @@ const runCommand = (command, config, cb) => {
       console.error(err);
   }
 
-  const cmd = spawn(
-    'docker-compose',
-    ['-f','docker-compose.json', ...command],
-    { stdio: 'inherit', cwd: path.join(config.appDirectory, PROJECT_FILE) }
-  );
+  // const cmd = spawn(
+  //   'docker-compose',
+  //   ['-f','docker-compose.json', ...command],
+  //   { stdio: 'inherit', cwd: path.join(config.appDirectory, PROJECT_FILE) }
+  // );
   cmd.on('close', function(code) {
     if (code !== 0) {
       console.log('docker exited on close with code ' + code);

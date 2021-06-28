@@ -44,6 +44,14 @@ const mergeConfig = (config, appDirectory, override = {}) => {
       config.workplace.mysql,
       override.mysql
     ),
+    selenium: Object.assign({},
+        {
+            image: 'selenium/hub:4.0',
+            port: 4444
+        },
+        config.workplace.selenium,
+        override.selenium
+    ),
     livereload: config.workplace.livereload !== undefined ? config.workplace.livereload : true
   });
 
@@ -64,6 +72,8 @@ const mergeConfig = (config, appDirectory, override = {}) => {
   getServiceConfig(config.workplace, override, 'varnish', workplaceConfig);
   getServiceConfig(config.workplace, override, 'clickhouse', workplaceConfig);
   getServiceConfig(config.workplace, override, 'rabbitmq', workplaceConfig);
+  getServiceConfig(config.workplace, override, 'firefox', workplaceConfig);
+  getServiceConfig(config.workplace, override, 'chrome', workplaceConfig);
 
   return workplaceConfig;
 };
