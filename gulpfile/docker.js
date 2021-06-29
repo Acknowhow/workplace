@@ -6,7 +6,7 @@ const YAML = require('yaml');
 const { PROJECT_FILE, updateGitignore } = require('./gitignore');
 
 const getVolumeName = (projectType, type) => `${projectType}-${type}`;
-const networkName = 'net';
+const networkName = 'myglo-net';
 
 const projectTypes = ['magento1', 'magento2', 'symfony'];
 
@@ -24,8 +24,8 @@ const optionalService = (
   [name]: Object.assign(
     {},
     {
-      container_name: `${projectName}-${name}`,
-      // networks: [networkName],
+      container_name: `${name}`,
+      networks: [networkName],
       image: image,
     },
     port ? {
@@ -41,6 +41,8 @@ const optionalService = (
 } : {};
 
 const optionalVolume = (image, name) => image ? { [name]: {} } : {};
+
+const customVolumeName = 'myglo-magento2';
 
 const fileTemplate = (
   projectType,
@@ -63,15 +65,15 @@ const fileTemplate = (
       php: {
         container_name: `${projectName}-php`,
         image: phpImage,
-        // networks: [networkName],
+        networks: [networkName],
         volumes: [`${projectRoot}:/var/www/${projectType}`],
         environment: ['PHPFPM_USER=$USERID', ...phpEnv],
-        depends_on: ['db'],
+        depends_on: [`${customVolumeName}_db`],
       },
       nginx: {
         container_name: `${projectName}-nginx`,
         image: nginxImage,
-        // networks: [networkName],
+        networks: [networkName],
         environment: ['NGINX_USER=$USERID', ...nginxEnv],
         volumes: [
           `${workplaceRoot}:/etc/nginx/sites-enabled/`,
@@ -80,10 +82,10 @@ const fileTemplate = (
         ports: [`${nginxPort}:80`],
         depends_on: ['php'],
       },
-      db: {
+      [`${customVolumeName}_db`]: {
         container_name: `${projectName}-db`,
         image: dbImage,
-        // networks: [networkName],
+        networks: [networkName],
         ports: [`${dbPort}:3306`],
         environment: [
           'MYSQL_ROOT_PASSWORD=mygento',
@@ -92,31 +94,32 @@ const fileTemplate = (
           'MYSQL_PASSWORD=mygento',
           ...dbEnv
         ],
-        volumes: [`${getVolumeName(projectType, 'db')}:/var/lib/mysql`],
+        volumes: [`${getVolumeName(customVolumeName, 'db')}:/var/lib/mysql`],
       },
     },
     optionalService(projectName, 'redis', redisImage, redisPort, 6379, redisEnv, []),
-    optionalService(projectName, 'elastic', elasticImage, elasticPort, 9200, ['discovery.type=single-node', ...elasticEnv], ['elastic:/usr/share/elasticsearch/data']),
+    optionalService(projectName, `${customVolumeName}-elastic`, elasticImage, elasticPort, 9200, ['discovery.type=single-node', ...elasticEnv],
+        [`${getVolumeName(customVolumeName, 'elastic')}:/usr/share/elasticsearch/data`]),
     optionalService(projectName, 'varnish', varnishImage, varnishPort, 8081, varnishEnv, []),
     optionalService(projectName, 'clickhouse', clickhouseImage, clickhousePort, 8123, clickhouseEnv, ['clickhouse:/var/lib/clickhouse']),
     optionalService(projectName, 'rabbitmq', rabbitmqImage, rabbitmqPort, 5672, rabbitmqEnv, ['rabbitmq:/var/lib/rabbitmq'])
   ),
   volumes: Object.assign(
     {},
-    { [getVolumeName(projectType, 'db')]: {} },
-    optionalVolume(elasticImage, 'elastic'),
+    { [getVolumeName(customVolumeName, 'db')]: {} },
+    optionalVolume(elasticImage, getVolumeName(customVolumeName, 'elastic')),
     optionalVolume(clickhouseImage, 'clickhouse'),
     optionalVolume(rabbitmqImage, 'rabbitmq')
   ),
-  // networks: {
-  //   [networkName]: {
-  //     driver: 'bridge',
-  //     driver_opts: {
-  //       'com.docker.network.enable_ipv6': 'false',
-  //       'com.docker.network.bridge.name': projectName
-  //     }
-  //   }
-  // }
+  networks: {
+    [networkName]: {
+      driver: 'bridge',
+      driver_opts: {
+        'com.docker.network.enable_ipv6': 'false',
+        'com.docker.network.bridge.name': projectName
+      }
+    }
+  }
 }, null, 2);
 
 const runCommand = (command, config, cb) => {
@@ -152,11 +155,11 @@ const runCommand = (command, config, cb) => {
       console.error(err);
   }
 
-  const cmd = spawn(
-    'docker-compose',
-    ['-f','docker-compose.json', ...command],
-    { stdio: 'inherit', cwd: path.join(config.appDirectory, PROJECT_FILE) }
-  );
+  // const cmd = spawn(
+  //   'docker-compose',
+  //   ['-f','docker-compose.json', ...command],
+  //   { stdio: 'inherit', cwd: path.join(config.appDirectory, PROJECT_FILE) }
+  // );
   cmd.on('close', function(code) {
     if (code !== 0) {
       console.log('docker exited on close with code ' + code);
