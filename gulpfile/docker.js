@@ -98,6 +98,7 @@ const fileTemplate = (
       },
     },
     optionalService(projectName, 'redis', redisImage, redisPort, 6379, redisEnv, []),
+    // Temporary solution where customVolumeName is used for customContainerName
     optionalService(projectName, `${customVolumeName}-elastic`, elasticImage, elasticPort, 9200, ['discovery.type=single-node', ...elasticEnv],
         [`${getVolumeName(customVolumeName, 'elastic')}:/usr/share/elasticsearch/data`]),
     optionalService(projectName, 'varnish', varnishImage, varnishPort, 8081, varnishEnv, []),
