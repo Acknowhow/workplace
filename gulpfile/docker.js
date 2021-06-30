@@ -6,8 +6,8 @@ const YAML = require('yaml');
 const { PROJECT_FILE, updateGitignore } = require('./gitignore');
 
 const getVolumeName = (projectType, type) => `${projectType}-${type}`;
-const networkName = 'myglo-net';
 
+const networkName = 'myglo-net';
 const projectTypes = ['magento1', 'magento2', 'symfony'];
 
 const getServiceConfig = (config, service) => {
@@ -21,10 +21,10 @@ const getServiceConfig = (config, service) => {
 const optionalService = (
   projectName, name, image, port = false, portDefault, env = [], volume = []
 ) => image ? {
-  [name]: Object.assign(
+  [`${name}_elastic`]: Object.assign(
     {},
     {
-      container_name: `${name}`,
+      container_name: `${name}-elastic`,
       networks: [networkName],
       image: image,
     },
@@ -62,7 +62,7 @@ const fileTemplate = (
   services: Object.assign(
     {},
     {
-      php: {
+      [`${projectName}_php`]: {
         container_name: `${projectName}-php`,
         image: phpImage,
         networks: [networkName],
@@ -70,7 +70,7 @@ const fileTemplate = (
         environment: ['PHPFPM_USER=$USERID', ...phpEnv],
         depends_on: [`${customVolumeName}_db`],
       },
-      nginx: {
+        [`${projectName}_nginx`]: {
         container_name: `${projectName}-nginx`,
         image: nginxImage,
         networks: [networkName],
@@ -80,7 +80,7 @@ const fileTemplate = (
           `${projectRoot}:/var/www/${projectType}`,
         ],
         ports: [`${nginxPort}:80`],
-        depends_on: ['php'],
+        depends_on: [`${projectName}_php`],
       },
       [`${customVolumeName}_db`]: {
         container_name: `${projectName}-db`,
@@ -98,8 +98,9 @@ const fileTemplate = (
       },
     },
     optionalService(projectName, 'redis', redisImage, redisPort, 6379, redisEnv, []),
+    // Volume name change is probably not required for PHP deployment
     // Temporary solution where customVolumeName is used for customContainerName
-    optionalService(projectName, `${customVolumeName}-elastic`, elasticImage, elasticPort, 9200, ['discovery.type=single-node', ...elasticEnv],
+    optionalService(projectName, `${projectName}`, elasticImage, elasticPort, 9200, ['discovery.type=single-node', ...elasticEnv],
         [`${getVolumeName(customVolumeName, 'elastic')}:/usr/share/elasticsearch/data`]),
     optionalService(projectName, 'varnish', varnishImage, varnishPort, 8081, varnishEnv, []),
     optionalService(projectName, 'clickhouse', clickhouseImage, clickhousePort, 8123, clickhouseEnv, ['clickhouse:/var/lib/clickhouse']),
